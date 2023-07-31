@@ -25,12 +25,19 @@ const port = new SerialPort({
 
 // Read data from the serial port
 port.on("data", (data: Buffer) => {
-  // Assuming the data received from the Arduino is in the format "X,Y,Z" (e.g., "100,200,300")
-  const [x, y, z] = data.toString().split(",").map(parseFloat);
+  const dataString = data.toString();
+  const regex = /X:(\d+)Y:(\d+)Z:(\d+)/; // Regular expression to match "X:123Y:321Z:123" format
 
-  // Process the data as needed
-  // For example, you can send MIDI messages based on the received data
-  sendMidiMessage(x, y, z);
+  const match = dataString.match(regex);
+  if (match) {
+    const [, x, y, z] = match.map(parseFloat);
+    sendMidiMessage(x, y, z);
+  } else {
+    console.warn(
+      "Received data does not match the expected format:",
+      dataString
+    );
+  }
 });
 
 // Send MIDI messages based on the received data
