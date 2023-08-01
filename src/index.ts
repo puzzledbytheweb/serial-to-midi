@@ -1,21 +1,25 @@
 import { SerialPort } from "serialport";
 import * as midi from "midi";
 
+import { Coordinates } from "./helper";
+
 const arduinoPort = "/dev/cu.usbmodem1301"; // Adjust this to the serial port connected to your Arduino
 const midiOutputPort = 0; // MIDI output port number (0 is usually the default output)
 
 // Create a MIDI output port
 const midiOutput = new midi.Output();
 
-// Open the MIDI output port
-try {
-  midiOutput.openPort(midiOutputPort);
-} catch (error) {
-  const availablePorts = midiOutput.getPortCount();
-  console.log("Ports available - ", availablePorts);
+const start = () => {
+  // Open the MIDI output port
+  try {
+    midiOutput.openPort(midiOutputPort);
+  } catch (error) {
+    const availablePorts = midiOutput.getPortCount();
+    console.log("Ports available - ", availablePorts);
 
-  throw error;
-}
+    throw error;
+  }
+};
 
 // Create the serial port to read data from Arduino
 const port = new SerialPort({
@@ -23,25 +27,22 @@ const port = new SerialPort({
   baudRate: 9600, // Adjust this to match the baud rate set in your Arduino code
 });
 
+const coordinatesBuffer = new Coordinates();
+
 // Read data from the serial port
 port.on("data", (data: Buffer) => {
-  const dataString = data.toString();
-  const regex = /X:(\d+)Y:(\d+)Z:(\d+)/; // Regular expression to match "X:123Y:321Z:123" format
+  const parsed = coordinatesBuffer.parseDataBuffer(data);
 
-  const match = dataString.match(regex);
-  if (match) {
-    const [, x, y, z] = match.map(parseFloat);
-    sendMidiMessage(x, y, z);
-  } else {
-    console.warn(
-      "Received data does not match the expected format:",
-      dataString
-    );
+  if (parsed) {
+    const { x, y, z } = parsed;
+
+    // These are never null
+    sendMidiMessage(x as number, y as number, z as number);
   }
 });
 
 // Send MIDI messages based on the received data
-function sendMidiMessage(x: number, y: number, z: number) {
+export function sendMidiMessage(x: number, y: number, z: number) {
   // Your MIDI message generation logic goes here
   // For example, you can use the "midiOutput.sendMessage" method to send MIDI messages
   // For simplicity, let's just print the data to the console
